@@ -1,47 +1,86 @@
-fn count_permutation(shipments: &Vec<u32>) -> Result<usize, i32> {
-    let total_weight: u32 = shipments.iter().sum();
-    let n = shipments.len() as u32;
+use std::collections::HashSet;
 
-    if total_weight % n != 0 {
-        return Err(-1);
-    }
-
-    let target_weight = total_weight / n;
-    let mut moves = 0;
-    let mut balance = 0;
-
-    for &weight in shipments {
-        balance += weight as i32 - target_weight as i32;
-        moves += balance.abs() as usize;
-    }
-
-    Ok(moves)
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+struct Point {
+    x: i32,
+    y: i32,
 }
 
-fn gen_shipments(n: usize) -> Vec<u32> {
-    let mut shipments = vec![0; n];
-    
-    for i in 0..(n as u32) {
-        shipments[(i as usize) % n] += 1;
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+struct Rectangle {
+    a: Point,
+    b: Point,
+}
+
+impl Rectangle {
+    fn area(&self) -> i32 {
+        let width = (self.b.x - self.a.x).abs();
+        let height = (self.b.y - self.a.y).abs();
+        width * height
     }
 
-    shipments
+    fn intersect(&self, other: &Rectangle) -> Option<Rectangle> {
+        let x1 = self.a.x.max(other.a.x);
+        let y1 = self.a.y.min(other.a.y);
+        let x2 = self.b.x.min(other.b.x);
+        let y2 = self.b.y.max(other.b.y);
+
+        if x1 < x2 && y2 < y1 {
+            Some(Rectangle {
+                a: Point { x: x1, y: y1 },
+                b: Point { x: x2, y: y2 },
+            })
+        } else {
+            None
+        }
+    }
+}
+
+fn area_occupied(rectangles: &Vec<Rectangle>) -> i32 {
+    let mut total_area = 0;
+    let mut overlap_areas = HashSet::new();
+
+    for (i, rect) in rectangles.iter().enumerate() {
+        total_area += rect.area();
+
+        for other in &rectangles[i + 1..] {
+            if let Some(intersection) = rect.intersect(other) {
+                overlap_areas.insert(intersection);
+            }
+        }
+    }
+
+    for overlap in overlap_areas {
+        total_area -= overlap.area();
+    }
+
+    total_area
+}
+
+fn test_data() -> Vec<Rectangle> {
+    vec![
+        Rectangle {
+            a: Point { x: 2, y: 9 },
+            b: Point { x: 5, y: 3 },
+        },
+        Rectangle {
+            a: Point { x: 1, y: 8 },
+            b: Point { x: 11, y: 6 },
+        },
+        Rectangle {
+            a: Point { x: 9, y: 10 },
+            b: Point { x: 13, y: 2 },
+        },
+    ]
+}
+
+fn area_occupied_test() {
+    let data = test_data();
+    let occupied = area_occupied(&data);
+    assert_eq!(occupied, 60);
 }
 
 fn main() {
-    let example1 = vec![8, 2, 2, 4, 4];
-    let example2 = vec![9, 3, 7, 2, 9];
-
-    match count_permutation(&example1) {
-        Ok(moves) => println!("Moves needed for example1: {}", moves),
-        Err(_) => println!("Equal distribution not possible for example1"),
-    }
-
-    match count_permutation(&example2) {
-        Ok(moves) => println!("Moves needed for example2: {}", moves),
-        Err(_) => println!("Equal distribution not possible for example2"),
-    }
-
-    let generated_shipments = gen_shipments(5);
-    println!("Generated shipments: {:?}", generated_shipments);
+    area_occupied_test();
+    println!("Test passed!");
 }
